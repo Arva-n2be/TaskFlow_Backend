@@ -9,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "https://taskflowio-eight.vercel.app/",
+        origin: ["http://localhost:5173", "https://taskflowio-eight.vercel.app"],
         methods: ["GET", "POST", "PUT", "DELETE"]
     }
 });
