@@ -37,8 +37,12 @@ exports.smartTaskCreation = async (req, res) => {
         WAKTU SEKARANG SEBAGAI ACUAN: ${formattedDate}, pukul ${formattedTime} WIB.
         Gunakan WAKTU SEKARANG SEBAGAI ACUAN untuk menghitung tanggal/waktu relatif (misal: "besok", "lusa", "senin depan") dan jika pengguna tidak menyebutkan tahun, gunakan tahun berjalan saat ini (${today.getFullYear()}).
 
+        VALIDASI INPUT:
+        Jika teks pengguna berupa teks acak, ketikan asal/tanpa makna (seperti "asdfghjkl", "qwerty", "hgdskjfd"), atau sama sekali tidak mengandung konteks rencana kerja, aktivitas, tugas, atau pekerjaan yang masuk akal, kembalikan objek JSON dengan field "error" berisi pesan penolakan dalam bahasa Indonesia (misalnya: "Perintah tidak bermakna atau tidak mengandung konteks tugas yang jelas. Silakan masukkan rencana kerja Anda."), dan "tasks" berupa array kosong.
+
         Kembalikan HANYA format JSON Object yang valid tanpa teks tambahan, tanpa backticks (\`\`\`), dan tanpa format markdown.
         Struktur JSON yang WAJIB digunakan:
+        Jika input valid:
         {
             "tasks": [
                 {
@@ -47,6 +51,12 @@ exports.smartTaskCreation = async (req, res) => {
                     "due_date": "YYYY-MM-DD HH:MM:SS" (atau null jika tidak disebutkan)
                 }
             ]
+        }
+
+        Jika input tidak valid/acak/tidak bermakna/tanpa konteks tugas:
+        {
+            "error": "Pesan penolakan yang menjelaskan bahwa input tidak valid atau tidak memiliki konteks tugas yang jelas",
+            "tasks": []
         }
 
         Teks pengguna: "${prompt}"
@@ -63,12 +73,20 @@ exports.smartTaskCreation = async (req, res) => {
 
         // Parsing teks ke format JSON Node.js
         let structuredTasks;
+        let errorMessage;
         try {
             const parsedData = JSON.parse(aiResponseText);
+            if (parsedData.error) {
+                errorMessage = parsedData.error;
+            }
             structuredTasks = parsedData.tasks || [];
         } catch (parseError) {
             console.error("Gagal parsing JSON dari AI:", aiResponseText);
             return res.status(500).json({ message: 'AI mengembalikan format yang tidak valid', rawResponse: aiResponseText });
+        }
+
+        if (errorMessage) {
+            return res.status(400).json({ message: errorMessage });
         }
 
         // 4. Simpan log ke tabel ai_logs (Sesuai requirement skripsi)
